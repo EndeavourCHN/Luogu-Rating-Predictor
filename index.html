@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>洛谷等级分预测</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f8f9fa; text-align: center; }
+    #chart { width: 90%; height: 500px; margin: 20px auto; }
+  </style>
+</head>
+<body>
+  <h1>洛谷等级分预测</h1>
+  <p>请选择从洛谷下载的 <code>user.json</code> 文件：</p>
+  <input type="file" id="file" accept=".json">
+  <div id="result"></div>
+  <div id="chart"></div>
+
+  <script>
+    const diffToCF = {
+      1: 700,  // 入门
+      2: 1000, // 普及-
+      3: 1400, // 普及/提高-
+      4: 1800, // 普及+/提高
+      5: 2250, // 提高+/省选-
+      6: 2750, // 省选/NOI-
+      7: 3250  // NOI/NOI+/CTSC
+    };
+
+    document.getElementById("file").addEventListener("change", loadFile);
+
+    function loadFile(event){
+      const file = event.target.files[0];
+      if(!file){ alert("请选择文件"); return; }
+      const reader = new FileReader();
+      reader.onload = function(){
+        try {
+          const json = JSON.parse(reader.result);
+          const user = json.currentData.user.name || "未知用户";
+          const problems = json.currentData.passedProblems || [];
+          if(problems.length === 0){
+            document.getElementById("result").innerText = "没有找到做题记录";
+            return;
+          }
+          showResult(user, problems);
+        } catch(e){
+          document.getElementById("result").innerText = "解析文件失败: " + e;
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function showResult(user, problems){
+      const diffCount = Array(8).fill(0);
+      let ratingSum = 0;
+
+      problems.forEach(p=>{
+        const d = p.difficulty ?? 1;
+        diffCount[d]++;
+        ratingSum += diffToCF[d] || 700;
+      });
+
+      const total = problems.length;
+      const avgRating = ratingSum / total;
+      const adjusted = avgRating + 30 * Math.log(total + 1);
+      const r_adjusted = Math.round(adjusted);
+      const lower = Math.round(adjusted - 100);
+      const upper = Math.round(adjusted + 100);
+
+      document.getElementById("result").innerHTML = `
+        <h3>${user}</h3>
+        <p>预测 Rating : <b>${r_adjusted}</b></p>
+        <p>平均题目对应 CF Rating: ${avgRating.toFixed(0)}</p>
+        <p>总做题数: ${total}</p>
+      `;
+
+      const chart = echarts.init(document.getElementById("chart"));
+      chart.setOption({
+        title: { text: "做题难度分布" },
+        xAxis: { type: "category", data: ["暂无评定","入门","普及-","普及/提高-","普及+/提高","提高+/省选-","省选/NOI-","NOI/NOI+/CTSC"] },
+        yAxis: { type: "value" },
+        series: [{
+          data: diffCount,
+          type: "bar",
+          itemStyle: { color: "#007bff" }
+        }]
+      });
+    }
+  </script>
+</body>
+</html>
