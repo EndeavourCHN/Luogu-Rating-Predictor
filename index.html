@@ -17,14 +17,27 @@
 
   <script src="./js/echarts.min.js"></script>
   <script>
+    const K_FIXED=255, L_FIXED=600, ALPHA=0.4625, BASE_RATING=0;
+
+    const diffColors = {
+      0: "#BFBFBF", // 暂无评定 - 灰
+      1: "#FE4C61", // 入门 - 红
+      2: "#F39C11", // 普及- - 橙
+      3: "#FFC116", // 普及/提高- - 黄
+      4: "#52C41A", // 普及+/提高 - 绿
+      5: "#3498DB", // 提高+/省选- - 蓝
+      6: "#9D3DCF", // 省选/NOI- - 紫
+      7: "#0E1D69"  // NOI/NOI+/CTSC - 黑
+    };
+
     const diffToCF = {
-      1: 700,  // 入门
+      1: 800,  // 入门
       2: 1000, // 普及-
       3: 1400, // 普及/提高-
       4: 1800, // 普及+/提高
-      5: 2250, // 提高+/省选-
-      6: 2750, // 省选/NOI-
-      7: 3250  // NOI/NOI+/CTSC
+      5: 2200, // 提高+/省选-
+      6: 2700, // 省选/NOI-
+      7: 3200  // NOI/NOI+/CTSC
     };
 
     document.getElementById("file").addEventListener("change", loadFile);
@@ -50,7 +63,26 @@
       reader.readAsText(file);
     }
 
-    function showResult(user, problems){
+    function showResult(user, problems, k = 0.65, p_exp = 3.5) {
+      const N = problems.length;
+      let R = 800;
+      let i = 0;
+      
+      for (const prob of problems) {
+        i++;
+        if (prob.difficulty == 0) continue; // 跳过未评定的题目
+        const phi = 1 + k * Math.pow(i / N, p_exp);
+        const rating = diffToCF[prob.difficulty];
+        const mapped = 800 + (rating - 800) * phi;
+        const base_w = Math.pow(i, ALPHA) - Math.pow(i - 1, ALPHA);
+        const delta  = mapped - R;
+        const scale  = 1 / (1 + Math.exp(-delta / L_FIXED));
+        const expected = 1 / (1 + Math.pow(10, delta / 400));
+        R += K_FIXED * (1 - expected) * base_w * scale;
+      }
+
+      R = Math.round(R);
+
       const diffCount = Array(8).fill(0);
       let ratingSum = 0;
 
@@ -60,29 +92,46 @@
         ratingSum += diffToCF[d] || 700;
       });
 
-      const total = problems.length;
-      const avgRating = ratingSum / total;
-      const adjusted = avgRating + 30 * Math.log(total + 1);
+      const avgRating = ratingSum / N;
+      const adjusted = avgRating + 30 * Math.log(N + 1);
       const r_adjusted = Math.round(adjusted);
-      const lower = Math.round(adjusted - 100);
-      const upper = Math.round(adjusted + 100);
 
       document.getElementById("result").innerHTML = `
         <h3>${user}</h3>
-        <p>预测 Rating : <b>${r_adjusted}</b></p>
-        <p>平均题目对应 CF Rating: ${avgRating.toFixed(0)}</p>
-        <p>总做题数: ${total}</p>
+        <p>预测 Rating : <b>${R}</b></p>
+        <p>平均题目对应 Rating: ${avgRating.toFixed(0)}</p>
+        <p>总做题数: ${N}</p>
       `;
 
       const chart = echarts.init(document.getElementById("chart"));
       chart.setOption({
         title: { text: "做题难度分布" },
-        xAxis: { type: "category", data: ["暂无评定","入门","普及-","普及/提高-","普及+/提高","提高+/省选-","省选/NOI-","NOI/NOI+/CTSC"] },
+        xAxis: {
+          type: "category",
+          data: ["暂无评定","入门","普及-","普及/提高-","普及+/提高","提高+/省选-","省选/NOI-","NOI/NOI+/CTSC"],
+          axisLabel: {
+            interval: 0,
+            rotate: 0,
+            formatter: function(value) {
+              return value;
+            }
+          }
+        },
         yAxis: { type: "value" },
         series: [{
           data: diffCount,
           type: "bar",
-          itemStyle: { color: "#007bff" }
+          label: {
+            show: true,
+            position: 'top',
+            color: '#000',
+            fontWeight: 'bold'
+          },
+          itemStyle: {
+            color: function(params) {
+              return diffColors[params.dataIndex] || "#007bff";
+            }
+          }
         }]
       });
     }

@@ -1,10 +1,10 @@
 # Luogu-Rating-Predictor
 
+**本项目受 Codeforces rating 预测项目 https://github.com/Patchouli-7/Patchouli-7.github.io 启发，借用了预测公式及部分参数。**
+
 一个洛谷等级分预测小网页。旨在通过统计用户的做题情况，预测其洛谷等级分。
 
 **提醒**：预测结果仅供参考，请勿过度解度。
-
-**目前本项目所使用的预测公式相当粗糙，后续会补充训练集优化拟合结果。**
 
 ## 使用方法
 
@@ -22,7 +22,7 @@
 
 2. 右键保存该页面，得到 `uid.json` 文件。
 
-3. 打开 `index.html` ，选择刚刚下载的`uid.json`文件，预测结果即刻呈现。
+3. 打开 `index.html` 或访问 https://endeavourchn.github.io/Luogu-Rating-Predictor/ (GitHub静态托管访问较慢，请视情况选择)，选择刚刚下载的`uid.json`文件，预测结果即刻呈现。
 
 ## 贡献
 
