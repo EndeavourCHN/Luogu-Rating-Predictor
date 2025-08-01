@@ -2,14 +2,14 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>洛谷等级分预测</title>
+  <title>洛谷 -> CF Rating 预测</title>
   <style>
     body { font-family: sans-serif; background: #f8f9fa; text-align: center; }
     #chart { width: 90%; height: 500px; margin: 20px auto; }
   </style>
 </head>
 <body>
-  <h1>洛谷等级分预测</h1>
+  <h1>洛谷 -> CF Rating 预测</h1>
   <p>请选择从洛谷下载的 <code>user.json</code> 文件：</p>
   <input type="file" id="file" accept=".json">
   <div id="result"></div>
@@ -17,7 +17,11 @@
 
   <script src="./js/echarts.min.js"></script>
   <script>
-    const K_FIXED=255, L_FIXED=600, ALPHA=0.4625, BASE_RATING=0;
+    const K_FIXED = 230; // 单题收益
+    const L_FIXED = 700; // 缩放分母
+    const ALPHA = 0.4625; // 边际收益
+    const k = 0.65;
+    const p = 3.5;
 
     const diffColors = {
       0: "#BFBFBF", // 暂无评定 - 灰
@@ -63,15 +67,22 @@
       reader.readAsText(file);
     }
 
-    function showResult(user, problems, k = 0.65, p_exp = 3.5) {
+    function showResult(user, problems) {
       const N = problems.length;
       let R = 800;
       let i = 0;
+
+      const sortedProblems = problems.slice().sort((a, b) => {
+        if ((a.difficulty ?? 1) === (b.difficulty ?? 1)) {
+          return (a.pid || "").localeCompare(b.pid || "");
+        }
+        return (a.difficulty ?? 1) - (b.difficulty ?? 1);
+      });
       
-      for (const prob of problems) {
+      for (const prob of sortedProblems) {
         i++;
         if (prob.difficulty == 0) continue; // 跳过未评定的题目
-        const phi = 1 + k * Math.pow(i / N, p_exp);
+        const phi = 1 + k * Math.pow(i / N, p);
         const rating = diffToCF[prob.difficulty];
         const mapped = 800 + (rating - 800) * phi;
         const base_w = Math.pow(i, ALPHA) - Math.pow(i - 1, ALPHA);
@@ -98,8 +109,8 @@
 
       document.getElementById("result").innerHTML = `
         <h3>${user}</h3>
-        <p>预测 Rating : <b>${R}</b></p>
-        <p>平均题目对应 Rating: ${avgRating.toFixed(0)}</p>
+        <p>预测 CF Rating : <b>${R}</b></p>
+        <p>平均题目对应 CF Rating: ${avgRating.toFixed(0)}</p>
         <p>总做题数: ${N}</p>
       `;
 
